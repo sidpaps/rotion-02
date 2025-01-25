@@ -20,6 +20,13 @@ const nextConfig = {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
+    // removed ppr flag since it requires Next.js canary
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), "canvas"];
+    }
+    return config;
   },
 }
 

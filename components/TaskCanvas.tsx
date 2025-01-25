@@ -1,35 +1,59 @@
-import { useQuery, useMutation } from "convex/react"
-import { Stage, Layer, Rect, Text } from "react-konva"
-import { useState, useEffect } from "react"
-import { api } from "../convex/_generated/api"
+'use client';
 
-export default function TaskCanvas({ boardId }) {
+import dynamic from 'next/dynamic';
+import { useQuery, useMutation } from "convex/react";
+import { Rect, Text } from "react-konva";
+import { useState, useEffect } from "react";
+import { api } from "../convex/_generated/api";
+import { KonvaEventObject } from 'konva/lib/Node';
+import { Id } from "../convex/_generated/dataModel";
+
+const Stage = dynamic(() => import('react-konva').then((mod) => mod.Stage), {
+  ssr: false
+});
+const Layer = dynamic(() => import('react-konva').then((mod) => mod.Layer), {
+  ssr: false
+});
+
+interface TaskCanvasProps {
+  boardId: string;
+}
+
+export default function TaskCanvas({ boardId }: TaskCanvasProps) {
   const tasks = useQuery(api.tasks.getTasks, { boardId })
   const updateTaskPosition = useMutation(api.tasks.updateTaskPosition)
   const [stageScale, setStageScale] = useState(1)
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 })
 
-  const handleDragEnd = (e, taskId) => {
+  const handleDragEnd = (e: KonvaEventObject<DragEvent>, taskId: Id<"tasks">) => {
     updateTaskPosition({
       id: taskId,
       position: { x: e.target.x(), y: e.target.y() },
     })
   }
 
-  const handleWheel = (e) => {
+  const handleWheel = (e: KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
     const scaleBy = 1.1
     const stage = e.target.getStage()
+    
+    if (!stage) return
+    
     const oldScale = stage.scaleX()
+    const pointerPos = stage.getPointerPosition()
+    
+    if (!pointerPos) return
+    
     const mousePointTo = {
-      x: stage.getPointerPosition().x / oldScale - stage.x() / oldScale,
-      y: stage.getPointerPosition().y / oldScale - stage.y() / oldScale,
+      x: pointerPos.x / oldScale - stage.x() / oldScale,
+      y: pointerPos.y / oldScale - stage.y() / oldScale,
     }
+    
     const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy
     setStageScale(newScale)
     setStagePosition({
-      x: -(mousePointTo.x - stage.getPointerPosition().x / newScale) * newScale,
-      y: -(mousePointTo.y - stage.getPointerPosition().y / newScale) * newScale,
+      x: -(mousePointTo.x - pointerPos.x / newScale) * newScale,
+      y: -(mousePointTo.y - pointerPos.y / newScale) * newScale,
     })
   }
 
